@@ -1,18 +1,17 @@
 package de.hskl.imst.i.cgma.raytracer;
  
-import java.awt.Color;
-import java.io.File;
-import java.io.IOException;
-import java.util.Random;
-import java.util.Vector;
-
 import de.hskl.imst.i.cgma.raytracer.file.I_Sphere;
+import de.hskl.imst.i.cgma.raytracer.file.OBJFileReader;
+import de.hskl.imst.i.cgma.raytracer.file.OBJ_Mesh;
 import de.hskl.imst.i.cgma.raytracer.file.RTFile;
-import de.hskl.imst.i.cgma.raytracer.file.RTFileReader;
 import de.hskl.imst.i.cgma.raytracer.file.RT_Object;
 import de.hskl.imst.i.cgma.raytracer.file.T_Mesh;
 import de.hskl.imst.i.cgma.raytracer.gui.IRayTracerImplementation;
 import de.hskl.imst.i.cgma.raytracer.gui.RayTracerGui;
+import java.awt.Color;
+import java.io.File;
+import java.io.IOException;
+import java.util.Vector;
 
 public class Raytracer05 implements IRayTracerImplementation {
     // viewing volume with infinite end
@@ -26,24 +25,37 @@ public class Raytracer05 implements IRayTracerImplementation {
 						// color
     private float[] ICenter = { 4.0f, 4.0f, 2.0f }; // center of point light
     
-    RayTracerGui gui = new RayTracerGui(this);
-
-    private int resx, resy; // viewport resolution
+    RayTracerGui gui = new RayTracerGui(this);    private int resx, resy; // viewport resolution
     private float h, w, aspect; // window height, width and aspect ratio
-
+    
     Vector<RT_Object> objects;
-
-    private Raytracer05() {
-	try {
-
+    
+    private Raytracer05() {	try {
 	    //gui.addObject(RTFileReader.read(I_Sphere.class, new File("Raytrace05/data/ikugel.dat")));
 	    //gui.addObject(RTFileReader.read(I_Sphere.class, new File("Raytrace05/data/ikugel2.dat")));
-	    gui.addObject(RTFileReader.read(T_Mesh.class, new File("Raytrace05/data/dreieck1.dat")));
-	    gui.addObject(RTFileReader.read(T_Mesh.class, new File("Raytrace05/data/dreiecke2.dat")));
-	    gui.addObject(RTFileReader.read(T_Mesh.class, new File("Raytrace05/data/kugel1.dat")));
-	    gui.addObject(RTFileReader.read(T_Mesh.class, new File("Raytrace05/data/kugel2.dat")));
-	    gui.addObject(RTFileReader.read(T_Mesh.class, new File("Raytrace05/data/kugel3.dat")));
-	    //gui.addObject(RTFileReader.read(T_Mesh.class, new File("Raytrace05/data/ikugel2.dat")));
+	    //gui.addObject(RTFileReader.read(T_Mesh.class, new File("d:/FTCG/Raytrace05/Raytrace05/data/dreieck1.dat")));
+	    //gui.addObject(RTFileReader.read(T_Mesh.class, new File("d:/FTCG/Raytrace05/Raytrace05/data/dreiecke2.dat")));
+	    //gui.addObject(RTFileReader.read(T_Mesh.class, new File("d:/FTCG/Raytrace05/Raytrace05/data/kugel1.dat")));
+	    //gui.addObject(RTFileReader.read(T_Mesh.class, new File("d:/FTCG/Raytrace05/Raytrace05/data/kugel2.dat")));
+	    //gui.addObject(RTFileReader.read(T_Mesh.class, new File("d:/FTCG/Raytrace05/Raytrace05/data/kugel3.dat")));
+	    
+	    // Lade OBJ-Datei, falls vorhanden
+	    File objFile = new File("d:/FTCG/Raytrace05/Raytrace05/data/r2d2_joined.obj");
+	    if (objFile.exists()) {
+	        System.out.println("OBJ-Datei gefunden, versuche zu laden: " + objFile.getPath());
+	        OBJ_Mesh objMesh = OBJFileReader.read(objFile);
+	        // Verschiebe das Modell, damit es im Sichtfeld ist
+	        for (int i = 0; i < objMesh.vertices.length; i++) {
+	            objMesh.vertices[i][0] += 2.0f;  // X-Verschiebung
+	            objMesh.vertices[i][1] -= 1.0f;  // Y-Verschiebung
+	            objMesh.vertices[i][2] -= 5.0f;  // Z-Verschiebung (weiter weg)
+	        }
+	        gui.addObject(objMesh);
+	        System.out.println("OBJ-Datei erfolgreich geladen und zum Raytracer hinzugefügt.");
+	    } else {
+	        System.out.println("Keine OBJ-Datei gefunden in: " + objFile.getPath());
+	    }
+	    
 	    objects = gui.getObjects();
 
 	} catch (IOException e) {
@@ -366,14 +378,12 @@ public class Raytracer05 implements IRayTracerImplementation {
     	l[2] = ICenter[2] - minIP[2];
     	
     	normalize(l);
-    	// decide which shading model will be applied
-
-    	// implicit: only phong shading available => shade=illuminate
+    	// decide which shading model will be applied    	// implicit: only phong shading available => shade=illuminate
     	if (objects.get(minObjectsIndex) instanceof I_Sphere)
     	    return phongIlluminate(minMaterial, minMaterialN, l, minN, v, Ia, Ids);
     	
     	// triangle mesh: flat, gouraud or phong shading according to file data
-    	else if (objects.get(minObjectsIndex).getHeader() == "TRIANGLE_MESH") {
+    	else if ("TRIANGLE_MESH".equals(objects.get(minObjectsIndex).getHeader())) {
     	    mesh = ((T_Mesh) objects.get(minObjectsIndex));
     	    switch (mesh.fgp) {
     	    case 'f':
@@ -615,15 +625,14 @@ public class Raytracer05 implements IRayTracerImplementation {
 	    t = (object.max[1] - rayEy) / rayVy;
 
 	    ip[0] = rayEx + t * rayVx;
-	    ip[2] = rayEz + t * rayVz;
-
-	    if (ip[0] > object.min[0] && ip[0] < object.max[0] && ip[2] > object.min[2] && ip[2] < object.max[2])
+	    ip[2] = rayEz + t * rayVz;	    if (ip[0] > object.min[0] && ip[0] < object.max[0] && ip[2] > object.min[2] && ip[2] < object.max[2])
 		return true;
 	}
 	return false;
     }
-        // precalulation of triangle normals and triangle areas
-        private void prepareMeshData() {
+    
+    // precalulation of triangle normals and triangle areas        
+    private void prepareMeshData() {
     	RTFile scene;
 
     	System.out.println("Vorverarbeitung 1 läuft");
@@ -633,90 +642,87 @@ public class Raytracer05 implements IRayTracerImplementation {
     	for (int objectsNumber = 0; objectsNumber < objects.size(); objectsNumber++) {
     	    scene = objects.get(objectsNumber);
 
-    	    if (scene.getHeader() == "TRIANGLE_MESH") {
-    		T_Mesh mesh = (T_Mesh) scene;
-
-    		// init memory
+    	    if ("TRIANGLE_MESH".equals(scene.getHeader())) {
+    		T_Mesh mesh = (T_Mesh) scene;    		// init memory
     		mesh.triangleNormals = new float[mesh.triangles.length][3];
     		mesh.triangleAreas = new float[mesh.triangles.length];
-
+    		
     		for (int i = 0; i < mesh.triangles.length; i++) {
     			p1 = mesh.vertices[mesh.triangles[i][0]];
-			    p2 = mesh.vertices[mesh.triangles[i][1]];
-			    p3 = mesh.vertices[mesh.triangles[i][2]];
+    			p2 = mesh.vertices[mesh.triangles[i][1]];
+    			p3 = mesh.vertices[mesh.triangles[i][2]];
 
     		    // calculate and store triangle normal n and triangle area a
     		    mesh.triangleAreas[i] = calculateN(mesh.triangleNormals[i],p1,p2,p3);
-    		}
-    	    }
+    		}}
     	}
     	System.out.println("Vorverarbeitung 1 beendet");
-        }
-        
-        private void precalculateMeshDataShading() {
-        	RTFile scene;
+    }
+    
+    private void precalculateMeshDataShading() {
+    	RTFile scene;
 
-        	System.out.println("Vorverarbeitung 2 läuft");
+    	System.out.println("Vorverarbeitung 2 läuft");
 
-        	float rayEx, rayEy, rayEz, rayVx, rayVy, rayVz;
-        	double rayVn;
-        	Color color;
-        	float x, y, z;
-        	float[] ip = new float[3];
-        	float[] n = new float[3];
-        	float[] l = new float[3];
-        	float[] v = new float[3];
-        	float[] material;
-        	float materialN;
-        	int matIndex;
+    	float rayEx, rayEy, rayEz, rayVx, rayVy, rayVz;
+    	double rayVn;
+    	Color color;
+    	float x, y, z;
+    	float[] ip = new float[3];
+    	float[] n = new float[3];
+    	float[] l = new float[3];
+    	float[] v = new float[3];
+    	float[] material;
+    	float materialN;
+    	int matIndex;
 
-        	for (int objectsNumber = 0; objectsNumber < objects.size(); objectsNumber++) {
-        	    scene = objects.get(objectsNumber);
+    	for (int objectsNumber = 0; objectsNumber < objects.size(); objectsNumber++) {
+    	    scene = objects.get(objectsNumber);
 
-        	    if (scene.getHeader() == "TRIANGLE_MESH") {
-        		T_Mesh mesh = (T_Mesh) scene;
+    	    if ("TRIANGLE_MESH".equals(scene.getHeader())) {
+    		T_Mesh mesh = (T_Mesh) scene;
 
-        		switch (mesh.fgp) {
-        		case 'f':
-        		case 'F':
-        		    // for flat-shading: initialize and calculate triangle
-        		    // colors
-        		    mesh.triangleColors = new float[mesh.triangles.length][3];
+    		switch (mesh.fgp) {
+    		case 'f':
+    		case 'F':
+    		    // for flat-shading: initialize and calculate triangle
+    		    // colors
+    		    mesh.triangleColors = new float[mesh.triangles.length][3];
 
-        		    rayEx = 0.0f;
-        		    rayEy = 0.0f;
-        		    rayEz = 0.0f;
+    		    rayEx = 0.0f;
+    		    rayEy = 0.0f;
+    		    rayEz = 0.0f;
 
-        		    // loop over all triangles
-        		    for (int i = 0; i < mesh.triangles.length; i++) {
-        			// the intersection point is the first vertex of the
-        			// triangle
-        			ip = mesh.vertices[mesh.triangles[i][0]];
+    		    // loop over all triangles
+    		    for (int i = 0; i < mesh.triangles.length; i++) {
+    			// the intersection point is the first vertex of the
+    			// triangle
+    			ip = mesh.vertices[mesh.triangles[i][0]];
 
-        			// the material is the material of the first triangle
-        			// point
-        			matIndex = mesh.verticesMat[mesh.triangles[i][0]];
-        			material = mesh.materials[matIndex];
-        			materialN = mesh.materialsN[matIndex];
+    			// the material is the material of the first triangle
+    			// point
+    			matIndex = mesh.verticesMat[mesh.triangles[i][0]];
+    			material = mesh.materials[matIndex];
+    			materialN = mesh.materialsN[matIndex];
 
-        			// x, y, z: view coordinates are intersection point
-        			x = ip[0];
-        			y = ip[1];
-        			z = ip[2];
+    			// x, y, z: view coordinates are intersection point
+    			x = ip[0];
+    			y = ip[1];
+    			z = ip[2];
 
-        			// ray vector
-        			rayVx = x - rayEx;
-        			rayVy = y - rayEy;
-        			rayVz = z - rayEz;
+    			// ray vector
+    			rayVx = x - rayEx;
+    			rayVy = y - rayEy;
+    			rayVz = z - rayEz;
 
-        			// fetch precalculated face normal
-        			n = mesh.triangleNormals[i];
+    			// fetch precalculated face normal
+    			n = mesh.triangleNormals[i];
 
-        			rayVn = rayVx * n[0] + rayVy * n[1] + rayVz * n[2];
+    			rayVn = rayVx * n[0] + rayVy * n[1] + rayVz * n[2];
 
-        			// backface? => next triangle
-        			if (rayVn >= 0)
-        			    continue;
+    			// backface? => next triangle
+    			if (rayVn >= 0)
+    			    continue;
 
         			// light vector at the intersection point
         			l[0] = ICenter[0] - ip[0];
@@ -825,11 +831,10 @@ public class Raytracer05 implements IRayTracerImplementation {
         			mesh.vertexColors[i][1] = (float) color.getGreen()/255;
         			mesh.vertexColors[i][2] = (float) color.getBlue()/255;
         		    }
-        		}
-        	    }
+        		}        	    }
         	}
         	System.out.println("Vorverarbeitung 2 beendet");
-            }
+    }
 
     public static void main(String[] args) {
 	Raytracer05 rt = new Raytracer05();
