@@ -38,20 +38,33 @@ public class Raytracer05 implements IRayTracerImplementation {
 	    //gui.addObject(RTFileReader.read(T_Mesh.class, new File("d:/FTCG/Raytrace05/Raytrace05/data/kugel1.dat")));
 	    //gui.addObject(RTFileReader.read(T_Mesh.class, new File("d:/FTCG/Raytrace05/Raytrace05/data/kugel2.dat")));
 	    //gui.addObject(RTFileReader.read(T_Mesh.class, new File("d:/FTCG/Raytrace05/Raytrace05/data/kugel3.dat")));
-	    
-	    // Lade OBJ-Datei, falls vorhanden
+	 	    // Lade OBJ-Datei, falls vorhanden - erstelle 3 Kopien mit verschiedenen Beleuchtungen
 	    File objFile = new File("d:/FTCG/Raytrace05/Raytrace05/data/r2d2_joined.obj");
 	    if (objFile.exists()) {
-	        System.out.println("OBJ-Datei gefunden, versuche zu laden: " + objFile.getPath());
-	        OBJ_Mesh objMesh = OBJFileReader.read(objFile);
-	        // Verschiebe das Modell, damit es im Sichtfeld ist
-	        for (int i = 0; i < objMesh.vertices.length; i++) {
-	            objMesh.vertices[i][0] += 2.0f;  // X-Verschiebung
-	            objMesh.vertices[i][1] -= 1.0f;  // Y-Verschiebung
-	            objMesh.vertices[i][2] -= 5.0f;  // Z-Verschiebung (weiter weg)
-	        }
-	        gui.addObject(objMesh);
-	        System.out.println("OBJ-Datei erfolgreich geladen und zum Raytracer hinzugefügt.");
+	        System.out.println("OBJ-Datei gefunden, lade 3 R2-D2 Modelle mit verschiedenen Beleuchtungen: " + objFile.getPath());
+	        
+	        // Erstes R2-D2: Flat Shading (links)
+	        OBJ_Mesh objMesh1 = OBJFileReader.read(objFile);
+	        objMesh1.fgp = 'f'; // Flat shading
+	        transformModel(objMesh1, -4.0f, 0.0f, -5.0f); // Links positionieren
+	        gui.addObject(objMesh1);
+	        System.out.println("R2-D2 #1 (Flat Shading) geladen");
+	        
+	        // Zweites R2-D2: Gouraud Shading (mitte)  
+	        OBJ_Mesh objMesh2 = OBJFileReader.read(objFile);
+	        objMesh2.fgp = 'g'; // Gouraud shading
+	        transformModel(objMesh2, 0.0f, 0.0f, -5.0f); // Mitte positionieren
+	        gui.addObject(objMesh2);
+	        System.out.println("R2-D2 #2 (Gouraud Shading) geladen");
+	        
+	        // Drittes R2-D2: Phong Shading (rechts)
+	        OBJ_Mesh objMesh3 = OBJFileReader.read(objFile);
+	        objMesh3.fgp = 'p'; // Phong shading
+	        transformModel(objMesh3, 4.0f, 0.0f, -5.0f); // Rechts positionieren
+	        gui.addObject(objMesh3);
+	        System.out.println("R2-D2 #3 (Phong Shading) geladen");
+	        
+	        System.out.println("Alle 3 R2-D2 Modelle erfolgreich geladen und positioniert.");
 	    } else {
 	        System.out.println("Keine OBJ-Datei gefunden in: " + objFile.getPath());
 	    }
@@ -346,22 +359,14 @@ public class Raytracer05 implements IRayTracerImplementation {
     				// matIndex =
     				// mesh.verticesMat[mesh.triangles[minIndex][0]];
     				// minMaterial = mesh.materials[matIndex];
-    				// minMaterialN = mesh.materialsN[matIndex];
-
-    				// the material is barycentrically interpolated between
+    				// minMaterialN = mesh.materialsN[matIndex];    				// the material is barycentrically interpolated between
     				// the three vertex materials
-    				int matIndex0 = mesh.verticesMat[mesh.triangles[minIndex][0]];
-    				int matIndex1 = mesh.verticesMat[mesh.triangles[minIndex][1]];
-    				int matIndex2 = mesh.verticesMat[mesh.triangles[minIndex][2]];
-    				float materialTemp[] = new float[9];
-    				int materialNTemp;
-    				for (int k = 0; k < 9; k++) {
-    				    materialTemp[k] = bu * mesh.materials[matIndex0][k] + bv * mesh.materials[matIndex1][k] + bw
-        						* mesh.materials[matIndex2][k];
-    				}
-    				minMaterial = materialTemp;
-    				materialNTemp = (int) (bu * mesh.materialsN [matIndex0] + bv * mesh.materialsN [matIndex1] + bw * mesh.materialsN [matIndex2]);
-    				minMaterialN = materialNTemp;
+    				
+    				// Für OBJ-Meshes: Verwende Material des ersten Vertex (nicht interpoliert)
+    				// Das ist besser für distinkte Materialien pro Face
+    				int matIndex = mesh.verticesMat[mesh.triangles[minIndex][0]];
+    				minMaterial = mesh.materials[matIndex];
+    				minMaterialN = mesh.materialsN[matIndex];
     			    }
     			}
     		    } else
@@ -419,8 +424,7 @@ public class Raytracer05 implements IRayTracerImplementation {
     	}
     	return null;
     }
-        
-        // calculate phong illumination model with material parameters material and
+          // calculate phong illumination model with material parameters material and
         // materialN, light vector l, normal vector n, viewing vector v, ambient
         // light Ia, diffuse and specular light Ids
         // return value is a new Color object
@@ -428,6 +432,14 @@ public class Raytracer05 implements IRayTracerImplementation {
     	float ir = 0, ig = 0, ib = 0; // reflected intensity, rgb channels
     	float[] r = new float[3]; // reflection vector
     	float ln, rv; // scalar products <l,n> and <r,v>
+
+    	// Debug: Zeige Material-Werte (nur gelegentlich)
+    	if (Math.random() < 0.0001) { // 0.01% der Zeit
+    	    System.out.printf("Material verwendet: Ka(%.2f,%.2f,%.2f) Kd(%.2f,%.2f,%.2f) Ks(%.2f,%.2f,%.2f) N=%.0f%n",
+    	        material[0], material[1], material[2], 
+    	        material[3], material[4], material[5],
+    	        material[6], material[7], material[8], materialN);
+    	}
 
     	// <l,n>
     	ln = l[0]*n[0]+l[1]*n[1]+l[2]*n[2];
@@ -834,6 +846,28 @@ public class Raytracer05 implements IRayTracerImplementation {
         		}        	    }
         	}
         	System.out.println("Vorverarbeitung 2 beendet");
+    }
+
+    /**
+     * Transformiert ein OBJ-Mesh: Rotiert um 180° um Y-Achse und verschiebt es an die gewünschte Position
+     * @param mesh Das zu transformierende Mesh
+     * @param offsetX X-Verschiebung
+     * @param offsetY Y-Verschiebung  
+     * @param offsetZ Z-Verschiebung
+     */
+    private void transformModel(OBJ_Mesh mesh, float offsetX, float offsetY, float offsetZ) {
+        for (int i = 0; i < mesh.vertices.length; i++) {
+            // Zuerst Rotation um 180 Grad um Y-Achse (cos(180°) = -1, sin(180°) = 0)
+            float originalX = mesh.vertices[i][0];
+            float originalZ = mesh.vertices[i][2];
+            mesh.vertices[i][0] = -originalX;  // X-Koordinate invertieren
+            mesh.vertices[i][2] = -originalZ;  // Z-Koordinate invertieren
+            
+            // Dann Verschiebung an gewünschte Position
+            mesh.vertices[i][0] += offsetX;  // X-Verschiebung
+            mesh.vertices[i][1] += offsetY - 1.0f;  // Y-Verschiebung (mit Standard-Offset)
+            mesh.vertices[i][2] += offsetZ;  // Z-Verschiebung
+        }
     }
 
     public static void main(String[] args) {
