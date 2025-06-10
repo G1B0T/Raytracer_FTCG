@@ -50,6 +50,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 2
+map_Kd final/cylinder2.png
 
 newmtl door_mat
 Ns 250.000000
@@ -80,6 +81,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 2
+map_Kd final/kuppel_oeffnung_001_tex.png
 
 newmtl kuppel_oeffnung_mat
 Ns 250.000000

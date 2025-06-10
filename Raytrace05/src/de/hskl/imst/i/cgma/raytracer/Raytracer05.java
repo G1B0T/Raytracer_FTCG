@@ -9,9 +9,13 @@ import de.hskl.imst.i.cgma.raytracer.file.T_Mesh;
 import de.hskl.imst.i.cgma.raytracer.gui.IRayTracerImplementation;
 import de.hskl.imst.i.cgma.raytracer.gui.RayTracerGui;
 import java.awt.Color;
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Vector;
+import javax.imageio.ImageIO;
 
 public class Raytracer05 implements IRayTracerImplementation {
     // viewing volume with infinite end
@@ -25,7 +29,10 @@ public class Raytracer05 implements IRayTracerImplementation {
 						// color
     private float[] ICenter = { 4.0f, 4.0f, 2.0f }; // center of point light
     
-    RayTracerGui gui = new RayTracerGui(this);    private int resx, resy; // viewport resolution
+    // Textur-Manager für PNG-Texturen
+    private Map<String, BufferedImage> textureCache = new HashMap<>();
+    
+    RayTracerGui gui = new RayTracerGui(this);private int resx, resy; // viewport resolution
     private float h, w, aspect; // window height, width and aspect ratio
     
     Vector<RT_Object> objects;
@@ -276,7 +283,7 @@ public class Raytracer05 implements IRayTracerImplementation {
     				continue;	    
 
     			    // no intersection point? => next triangle
-    			    if (Math.abs(rayVn) < 1E-7)
+    			    if (Math.abs(rayVn) < 1E-3)
     				continue;
 
     			    pen = (p1[0]-rayEx)*n[0]+(p1[1]-rayEy)*n[1]+(p1[2]-rayEz)*n[2];
@@ -310,22 +317,13 @@ public class Raytracer05 implements IRayTracerImplementation {
     			    // the intersection point
     			    minIP[0] = ip[0];
     			    minIP[1] = ip[1];
-    			    minIP[2] = ip[2];
-
-    			    switch (mesh.fgp) {
+    			    minIP[2] = ip[2];    			    switch (mesh.fgp) {
     			    case 'f':
     			    case 'F':
-    				
-//    				 // the normal is the surface normal 
-//    				 minN[0] = n[0];
-//    				 minN[1] = n[1]; 
-//    				 minN[2] = n[2];
-//    				  
-//    				 // the material is the material of the first triangle point 
-//    				 int matIndex = mesh.verticesMat[mesh.triangles[minIndex][0]];
-//    				 minMaterial = mesh.materials[matIndex]; 
-//    				 minMaterialN= mesh.materialsN[matIndex];
-    				
+    				// Für Flat Shading: Berechne baryzentrische Koordinaten für UV-Interpolation
+    				bu = ai[0] / a;
+    				bv = ai[1] / a;
+    				bw = ai[2] / a;
     				break;
     			    
     			    case 'g':
@@ -390,18 +388,55 @@ public class Raytracer05 implements IRayTracerImplementation {
     	// triangle mesh: flat, gouraud or phong shading according to file data
     	else if ("TRIANGLE_MESH".equals(objects.get(minObjectsIndex).getHeader())) {
     	    mesh = ((T_Mesh) objects.get(minObjectsIndex));
-    	    switch (mesh.fgp) {
-    	    case 'f':
+    	    switch (mesh.fgp) {    	    case 'f':
     	    case 'F':
-    		// illumination can be calculated here
-    		// this is a variant between flat und phong shading
-    		//return phongIlluminate(minMaterial, minMaterialN, l, minN, v, Ia, Ids);
-    	    	// lookup triangle color of triangle hit
-			return new Color(mesh.triangleColors[minIndex][0], mesh.triangleColors[minIndex][1], mesh.triangleColors[minIndex][2]);
-    		    case 'g':
+    		// Flat shading mit Textur-Unterstützung
+    		Color baseColor = new Color(mesh.triangleColors[minIndex][0], mesh.triangleColors[minIndex][1], mesh.triangleColors[minIndex][2]);
+    		
+    		// Prüfe auf Textur-Unterstützung
+    		if (mesh instanceof OBJ_Mesh) {
+    		    OBJ_Mesh objMesh = (OBJ_Mesh) mesh;
+    		    
+    		    // Interpoliere UV-Koordinaten für den Schnittpunkt
+    		    float[] uvCoords = new float[2];
+    		    if (objMesh.interpolateUV(minIndex, bu, bv, uvCoords)) {
+    			// Hole Material-Index des ersten Vertex
+    			int matIndex = objMesh.verticesMat[objMesh.triangles[minIndex][0]];
+    			String texturePath = objMesh.getTexturePath(matIndex);
+    			
+    			if (texturePath != null) {
+    			    BufferedImage texture = loadTexture(texturePath);
+    			    if (texture != null) {
+    				// Sample Textur
+    				float[] textureColor = new float[3];
+    				sampleTexture(texture, uvCoords[0], uvCoords[1], textureColor);
+    				
+    				// Debug: Zeige UV und Textur-Info
+    				if (Math.random() < 0.001) {
+    				    System.out.printf("Flat: UV(%.3f,%.3f) -> RGB(%.3f,%.3f,%.3f) aus %s%n", 
+    				        uvCoords[0], uvCoords[1], textureColor[0], textureColor[1], textureColor[2], texturePath);
+    				}
+    						// KORREKTUR: Verwende fast nur Textur mit minimaler Beleuchtung
+				// um die blauen Details und Markierungen deutlich sichtbar zu machen
+				float baseR = baseColor.getRed() / 255.0f;
+				float baseG = baseColor.getGreen() / 255.0f;
+				float baseB = baseColor.getBlue() / 255.0f;
+				
+				// Neue Mischung: 98% Textur, 2% Beleuchtung für maximale Textur-Sichtbarkeit
+				float r = textureColor[0] * 0.98f + baseR * 0.02f;
+				float g = textureColor[1] * 0.98f + baseG * 0.02f;
+				float b = textureColor[2] * 0.98f + baseB * 0.02f;
+    				
+    				return new Color(Math.min(1.0f, r), Math.min(1.0f, g), Math.min(1.0f, b));
+    			    }
+    			}
+    		    }
+    		}
+    		
+    		// Fallback auf normale Flat-Schattierung
+    		return baseColor;    		    case 'g':
     		    case 'G':
-    			// the color is barycentrically interpolated between the three
-    			// vertex colors
+    			// Gouraud shading mit Textur-Unterstützung
     			float colorf[] = new float[3];
     			colorf[0] = bu * mesh.vertexColors[mesh.triangles[minIndex][2]][0] + bv * mesh.vertexColors[mesh.triangles[minIndex][0]][0] + bw
     				* mesh.vertexColors[mesh.triangles[minIndex][1]][0];
@@ -410,11 +445,83 @@ public class Raytracer05 implements IRayTracerImplementation {
     			colorf[2] = bu * mesh.vertexColors[mesh.triangles[minIndex][2]][2] + bv * mesh.vertexColors[mesh.triangles[minIndex][0]][2] + bw
     				* mesh.vertexColors[mesh.triangles[minIndex][1]][2];
 
-    			return new Color(colorf[0] < 1.0f ? colorf[0] : 1.0f, colorf[1] < 1.0f ? colorf[1] : 1.0f, colorf[2] < 1.0f ? colorf[2] : 1.0f);
-    		    case 'p':
+    			// Prüfe auf Textur-Unterstützung
+    			if (mesh instanceof OBJ_Mesh) {
+    			    OBJ_Mesh objMesh = (OBJ_Mesh) mesh;
+    			    
+    			    // Interpoliere UV-Koordinaten für den Schnittpunkt
+    			    float[] uvCoords = new float[2];
+    			    if (objMesh.interpolateUV(minIndex, bu, bv, uvCoords)) {
+    				// Hole Material-Index des ersten Vertex
+    				int matIndex = objMesh.verticesMat[objMesh.triangles[minIndex][0]];
+    				String texturePath = objMesh.getTexturePath(matIndex);
+    				
+    				if (texturePath != null) {
+    				    BufferedImage texture = loadTexture(texturePath);
+    				    if (texture != null) {
+    					// Sample Textur
+    					float[] textureColor = new float[3];
+    					sampleTexture(texture, uvCoords[0], uvCoords[1], textureColor);
+    					
+    					// Debug: Zeige UV und Textur-Info
+    					if (Math.random() < 0.001) {
+    					    System.out.printf("Gouraud: UV(%.3f,%.3f) -> RGB(%.3f,%.3f,%.3f) aus %s%n", 
+    					        uvCoords[0], uvCoords[1], textureColor[0], textureColor[1], textureColor[2], texturePath);
+    					}
+    					// KORREKTUR: Viel mehr Textur-Sichtbarkeit für Gouraud
+					colorf[0] = textureColor[0] * 0.95f + colorf[0] * 0.05f;
+					colorf[1] = textureColor[1] * 0.95f + colorf[1] * 0.05f;
+					colorf[2] = textureColor[2] * 0.95f + colorf[2] * 0.05f;
+    				    }
+    				}
+    			    }
+    			}
+    			
+    			return new Color(colorf[0] < 1.0f ? colorf[0] : 1.0f, colorf[1] < 1.0f ? colorf[1] : 1.0f, colorf[2] < 1.0f ? colorf[2] : 1.0f);    		    case 'p':
     		    case 'P':
-    			// calculate the color per per pixel phong lightning
-    			return phongIlluminate(minMaterial, minMaterialN, l, minN, v, Ia, Ids);
+    			// Phong shading mit Textur-Unterstützung
+    			Color phongColor = phongIlluminate(minMaterial, minMaterialN, l, minN, v, Ia, Ids);
+    			
+    			// Prüfe auf Textur-Unterstützung
+    			if (mesh instanceof OBJ_Mesh) {
+    			    OBJ_Mesh objMesh = (OBJ_Mesh) mesh;
+    			    
+    			    // Interpoliere UV-Koordinaten für den Schnittpunkt
+    			    float[] uvCoords = new float[2];
+    			    if (objMesh.interpolateUV(minIndex, bu, bv, uvCoords)) {
+    				// Hole Material-Index des ersten Vertex
+    				int matIndex = objMesh.verticesMat[objMesh.triangles[minIndex][0]];
+    				String texturePath = objMesh.getTexturePath(matIndex);
+    				
+    				if (texturePath != null) {
+    				    BufferedImage texture = loadTexture(texturePath);
+    				    if (texture != null) {
+    					// Sample Textur
+    					float[] textureColor = new float[3];
+    					sampleTexture(texture, uvCoords[0], uvCoords[1], textureColor);
+    					
+    					// Debug: Zeige UV und Textur-Info
+    					if (Math.random() < 0.001) {
+    					    System.out.printf("Phong: UV(%.3f,%.3f) -> RGB(%.3f,%.3f,%.3f) aus %s%n", 
+    					        uvCoords[0], uvCoords[1], textureColor[0], textureColor[1], textureColor[2], texturePath);
+    					}
+    										// KORREKTUR: Mehr Textur-Dominanz für Phong-Beleuchtung
+					float phongR = phongColor.getRed() / 255.0f;
+					float phongG = phongColor.getGreen() / 255.0f;
+					float phongB = phongColor.getBlue() / 255.0f;
+							// Neue Mischung: 95% Textur, 5% Phong für maximale Textur-Sichtbarkeit
+					float r = textureColor[0] * 0.95f + phongR * 0.05f;
+					float g = textureColor[1] * 0.95f + phongG * 0.05f;
+					float b = textureColor[2] * 0.95f + phongB * 0.05f;
+    					
+    					return new Color(Math.min(1.0f, r), Math.min(1.0f, g), Math.min(1.0f, b));
+    				    }
+    				}
+    			    }
+    			}
+    			
+    			// Fallback auf normale Phong-Schattierung
+    			return phongColor;
     			// return new Color(material[3], material[4], material[5]);
     			// break;
 
@@ -582,7 +689,7 @@ public class Raytracer05 implements IRayTracerImplementation {
 	float ip[] = new float[3];
 
 	// front and back
-	if (Math.abs(rayVz) > 1E-5) {
+	if (Math.abs(rayVz) > 1E-3){
 	    // front xy
 	    t = (object.max[2] - rayEz) / rayVz;
 
@@ -603,7 +710,7 @@ public class Raytracer05 implements IRayTracerImplementation {
 	}
 
 	// left and right
-	if (Math.abs(rayVx) > 1E-5) {
+	if (Math.abs(rayVx) > 1E-3) {
 	    // left yz
 	    t = (object.min[0] - rayEx) / rayVx;
 
@@ -623,7 +730,7 @@ public class Raytracer05 implements IRayTracerImplementation {
 		return true;
 	}
 	// top and bottom
-	if (Math.abs(rayVy) > 1E-5) {
+	if (Math.abs(rayVy) > 1E-3) {
 	    // top xz
 	    t = (object.min[1] - rayEy) / rayVy;
 
@@ -868,11 +975,138 @@ public class Raytracer05 implements IRayTracerImplementation {
             mesh.vertices[i][1] += offsetY - 1.0f;  // Y-Verschiebung (mit Standard-Offset)
             mesh.vertices[i][2] += offsetZ;  // Z-Verschiebung
         }
-    }
-
-    public static void main(String[] args) {
+    }    public static void main(String[] args) {
 	Raytracer05 rt = new Raytracer05();
 
 	rt.doRayTrace();
+    }
+    
+    /**
+     * Lädt eine Textur und speichert sie im Cache
+     * @param texturePath Pfad zur Textur-Datei (relativ zum data-Verzeichnis)
+     * @return Das BufferedImage oder null bei Fehlern
+     */
+    private BufferedImage loadTexture(String texturePath) {
+        if (texturePath == null || texturePath.isEmpty()) {
+            return null;
+        }
+        
+        // Prüfe Cache zuerst
+        if (textureCache.containsKey(texturePath)) {
+            return textureCache.get(texturePath);
+        }
+        
+        try {
+            // Vollständiger Pfad zur Textur-Datei
+            File textureFile = new File("d:/FTCG/Raytrace05/Raytrace05/data/" + texturePath);
+            if (!textureFile.exists()) {
+                System.err.println("WARNUNG: Textur-Datei nicht gefunden: " + textureFile.getAbsolutePath());
+                return null;
+            }
+            
+            System.out.println("Lade Textur: " + textureFile.getAbsolutePath());
+            BufferedImage image = ImageIO.read(textureFile);
+            
+            if (image == null) {
+                System.err.println("FEHLER: Kann Textur nicht laden: " + textureFile.getAbsolutePath());
+                return null;
+            }
+            
+            // Im Cache speichern
+            textureCache.put(texturePath, image);
+            System.out.println("Textur erfolgreich geladen: " + image.getWidth() + "x" + image.getHeight() + " - " + texturePath);
+            
+            return image;
+            
+        } catch (IOException e) {
+            System.err.println("FEHLER beim Laden der Textur " + texturePath + ": " + e.getMessage());
+            return null;
+        }
+    }    /**
+     * Sampelt eine Farbe aus einer Textur an den gegebenen UV-Koordinaten
+     * @param image Das BufferedImage
+     * @param u UV-Koordinate U (0.0 bis 1.0)
+     * @param v UV-Koordinate V (0.0 bis 1.0)
+     * @param result Array für das Ergebnis [r, g, b] (0.0 bis 1.0)
+     */
+    private void sampleTexture(BufferedImage image, float u, float v, float[] result) {
+        if (image == null) {
+            result[0] = result[1] = result[2] = 1.0f; // Weiss als Fallback
+            return;
+        }
+        
+        // Wrap UV-Koordinaten (Wiederholung bei Überschreitung)
+        u = u - (float)Math.floor(u);
+        v = v - (float)Math.floor(v);
+        
+        // EXPERIMENTELL: Teste verschiedene UV-Orientierungen
+        // Variante 1: Keine Spiegelung (Standard OBJ)
+        // v = v;  // Unverändert
+        
+        // Variante 2: V-Spiegelung (OpenGL-Style)
+        v = 1.0f - v;
+        
+        // Variante 3: U-Spiegelung (falls horizontal gespiegelt)
+        // u = 1.0f - u;
+        
+        // Variante 4: Beide Achsen spiegeln
+        // u = 1.0f - u; v = 1.0f - v;
+        
+        int width = image.getWidth();
+        int height = image.getHeight();
+        
+        // Verbesserung: Bilineare Interpolation für glattere Texturen
+        float fx = u * (width - 1);
+        float fy = v * (height - 1);
+        
+        int x1 = (int)fx;
+        int y1 = (int)fy;
+        int x2 = Math.min(x1 + 1, width - 1);
+        int y2 = Math.min(y1 + 1, height - 1);
+        
+        float wx = fx - x1;
+        float wy = fy - y1;
+        
+        // Hole vier benachbarte Pixel
+        int pixel00 = image.getRGB(x1, y1);
+        int pixel10 = image.getRGB(x2, y1);
+        int pixel01 = image.getRGB(x1, y2);
+        int pixel11 = image.getRGB(x2, y2);
+        
+        // Extrahiere Farbkanäle
+        float r00 = ((pixel00 >> 16) & 0xFF) / 255.0f;
+        float g00 = ((pixel00 >> 8) & 0xFF) / 255.0f;
+        float b00 = (pixel00 & 0xFF) / 255.0f;
+        
+        float r10 = ((pixel10 >> 16) & 0xFF) / 255.0f;
+        float g10 = ((pixel10 >> 8) & 0xFF) / 255.0f;
+        float b10 = (pixel10 & 0xFF) / 255.0f;
+        
+        float r01 = ((pixel01 >> 16) & 0xFF) / 255.0f;
+        float g01 = ((pixel01 >> 8) & 0xFF) / 255.0f;
+        float b01 = (pixel01 & 0xFF) / 255.0f;
+        
+        float r11 = ((pixel11 >> 16) & 0xFF) / 255.0f;
+        float g11 = ((pixel11 >> 8) & 0xFF) / 255.0f;
+        float b11 = (pixel11 & 0xFF) / 255.0f;
+        
+        // Bilineare Interpolation
+        float r0 = r00 * (1 - wx) + r10 * wx;
+        float r1 = r01 * (1 - wx) + r11 * wx;
+        result[0] = r0 * (1 - wy) + r1 * wy;
+        
+        float g0 = g00 * (1 - wx) + g10 * wx;
+        float g1 = g01 * (1 - wx) + g11 * wx;
+        result[1] = g0 * (1 - wy) + g1 * wy;
+        
+        float b0 = b00 * (1 - wx) + b10 * wx;
+        float b1 = b01 * (1 - wx) + b11 * wx;
+        result[2] = b0 * (1 - wy) + b1 * wy;
+        
+        // Debug: Zeige UV-Transformation (selten)
+        if (Math.random() < 0.0005) {
+            System.out.printf("UV-Sampling V2: Original(%.3f,%.3f) -> Bilinear RGB(%.3f,%.3f,%.3f)%n", 
+                u, v, result[0], result[1], result[2]);
+        }
     }
 }

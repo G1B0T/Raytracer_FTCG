@@ -33,12 +33,14 @@ public class OBJFileReader {
             0.0f, 0.0f, 0.0f   // specular
         };
         int[] defaultMaterialsN = new int[1];
-        defaultMaterialsN[0] = 1;
-          // Listen für OBJ-Daten
+        defaultMaterialsN[0] = 1;        // Listen für OBJ-Daten
         List<float[]> vertices = new ArrayList<>();
+        List<float[]> uvCoordinates = new ArrayList<>(); // UV-Koordinaten aus der OBJ-Datei
         List<int[]> faces = new ArrayList<>();
+        List<int[]> uvIndices = new ArrayList<>(); // UV-Indizes für jedes Face
         List<Integer> faceMaterials = new ArrayList<>(); // Material-Index für jedes Face
         Map<String, Integer> materialNameToIndex = new HashMap<>();
+        Map<String, String> materialToTexturePath = new HashMap<>(); // Material-Name zu Textur-Pfad
         int currentMaterialIndex = 0; // Standard-Material
         
         try (BufferedReader reader = new BufferedReader(new FileReader(objFile))) {
@@ -50,8 +52,7 @@ public class OBJFileReader {
                     continue; // Überspringe Kommentare und leere Zeilen
                 }
                 
-                String[] parts = line.split("\\s+");
-                  if (parts[0].equalsIgnoreCase("v")) { // Vertex
+                String[] parts = line.split("\\s+");                if (parts[0].equalsIgnoreCase("v")) { // Vertex
                     if (parts.length >= 4) {
                         float[] vertex = new float[3];
                         vertex[0] = Float.parseFloat(parts[1]);
@@ -60,19 +61,36 @@ public class OBJFileReader {
                         vertices.add(vertex);
                     }
                 }
+                else if (parts[0].equalsIgnoreCase("vt")) { // Texture coordinate (UV)
+                    if (parts.length >= 3) {
+                        float[] uv = new float[2];
+                        uv[0] = Float.parseFloat(parts[1]); // U
+                        uv[1] = Float.parseFloat(parts[2]); // V
+                        uvCoordinates.add(uv);
+                    }
+                }
                 else if (parts[0].equalsIgnoreCase("f")) { // Face
                     if (parts.length >= 4) {
                         // Dreieck erzeugen (OBJ-Indizes beginnen bei 1, Java bei 0)
                         int[] face = new int[3];
+                        int[] uvFace = new int[3]; // UV-Indizes für dieses Face
                         
                         // Für jeden Eckpunkt des Face
                         for (int i = 0; i < 3; i++) {
                             String[] vertexData = parts[i + 1].split("/");
                             // Vertex-Index (immer vorhanden)
                             face[i] = Integer.parseInt(vertexData[0]) - 1;
+                            
+                            // UV-Index (optional, nach dem ersten "/")
+                            if (vertexData.length > 1 && !vertexData[1].isEmpty()) {
+                                uvFace[i] = Integer.parseInt(vertexData[1]) - 1;
+                            } else {
+                                uvFace[i] = -1; // Kein UV-Index
+                            }
                         }
                         
                         faces.add(face);
+                        uvIndices.add(uvFace);
                         faceMaterials.add(currentMaterialIndex); // Speichere aktuelles Material für dieses Face
                     }
                 }
@@ -86,12 +104,12 @@ public class OBJFileReader {
                             System.out.println("WARNUNG: Unbekanntes Material: " + materialName);
                         }
                     }
-                }
-                else if (parts[0].equalsIgnoreCase("mtllib")) {
-                    if (parts.length >= 2) {                        String mtlFilename = parts[1];
+                }                else if (parts[0].equalsIgnoreCase("mtllib")) {
+                    if (parts.length >= 2) {
+                        String mtlFilename = parts[1];
                         File mtlFile = new File(objFile.getParent(), mtlFilename);
                         if (mtlFile.exists()) {
-                            loadMTLFile(mtlFile, mesh, materialNameToIndex);
+                            loadMTLFile(mtlFile, mesh, materialNameToIndex, materialToTexturePath);
                         } else {
                             System.out.println("WARNUNG: MTL-Datei nicht gefunden: " + mtlFilename);
                         }
@@ -99,16 +117,64 @@ public class OBJFileReader {
                 }
             }
         }
-        
-        // Konvertiere die Daten in das T_Mesh-Format
+          // Konvertiere die Daten in das T_Mesh-Format
         mesh.vertices = new float[vertices.size()][3];
         for (int i = 0; i < vertices.size(); i++) {
             mesh.vertices[i] = vertices.get(i);
         }
-        
+
         mesh.triangles = new int[faces.size()][3];
         for (int i = 0; i < faces.size(); i++) {
             mesh.triangles[i] = faces.get(i);
+        }
+        
+        // UV-Koordinaten verarbeiten - erstelle UV-Array für jeden Vertex
+        if (!uvCoordinates.isEmpty()) {
+            System.out.println("Verarbeite UV-Koordinaten: " + uvCoordinates.size() + " UV-Paare für " + mesh.vertices.length + " Vertices");
+            
+            // Erstelle UV-Array basierend auf der größten Anzahl von Vertices
+            mesh.uvCoordinates = new float[mesh.vertices.length][2];
+            
+            // Initialisiere alle UV-Koordinaten mit Standardwerten
+            for (int i = 0; i < mesh.uvCoordinates.length; i++) {
+                mesh.uvCoordinates[i][0] = 0.0f; // U
+                mesh.uvCoordinates[i][1] = 0.0f; // V
+            }
+            
+            // Setze UV-Koordinaten basierend auf Face-UV-Indizes
+            for (int faceIndex = 0; faceIndex < uvIndices.size() && faceIndex < mesh.triangles.length; faceIndex++) {
+                int[] face = mesh.triangles[faceIndex];
+                int[] uvFace = uvIndices.get(faceIndex);
+                
+                for (int i = 0; i < 3; i++) {
+                    int vertexIndex = face[i];
+                    int uvIndex = uvFace[i];
+                    
+                    if (uvIndex >= 0 && uvIndex < uvCoordinates.size() && 
+                        vertexIndex >= 0 && vertexIndex < mesh.uvCoordinates.length) {
+                        
+                        float[] uv = uvCoordinates.get(uvIndex);
+                        mesh.uvCoordinates[vertexIndex][0] = uv[0];
+                        mesh.uvCoordinates[vertexIndex][1] = uv[1];
+                    }
+                }
+            }
+        }
+        
+        // Textur-Pfade für Materialien setzen
+        if (!materialToTexturePath.isEmpty()) {
+            mesh.texturePaths = new String[mesh.materials != null ? mesh.materials.length : 1];
+            
+            for (Map.Entry<String, String> entry : materialToTexturePath.entrySet()) {
+                String materialName = entry.getKey();
+                String texturePath = entry.getValue();
+                Integer materialIndex = materialNameToIndex.get(materialName);
+                
+                if (materialIndex != null && materialIndex < mesh.texturePaths.length) {
+                    mesh.texturePaths[materialIndex] = texturePath;
+                    System.out.println("Material '" + materialName + "' (Index " + materialIndex + ") -> Textur: " + texturePath);
+                }
+            }
         }
           // Setze Material für alle Vertices basierend auf Face-Materialien
         mesh.verticesMat = new int[mesh.vertices.length];
@@ -159,15 +225,15 @@ public class OBJFileReader {
         System.out.println();
         
         return mesh;
-    }
-      /**
+    }    /**
      * Liest eine MTL-Datei und setzt die Materialien im Mesh
      * @param mtlFile Die MTL-Datei
      * @param mesh Das Mesh, zu dem die Materialien hinzugefügt werden sollen
      * @param materialNameToIndex Map zur Zuordnung von Material-Namen zu Indizes
+     * @param materialToTexturePath Map zur Zuordnung von Material-Namen zu Textur-Pfaden
      * @throws IOException Bei Fehlern beim Lesen der Datei
      */
-    private static void loadMTLFile(File mtlFile, T_Mesh mesh, Map<String, Integer> materialNameToIndex) throws IOException {
+    private static void loadMTLFile(File mtlFile, T_Mesh mesh, Map<String, Integer> materialNameToIndex, Map<String, String> materialToTexturePath) throws IOException {
         System.out.println("Lade MTL-Datei: " + mtlFile.getPath());
         
         List<float[]> materials = new ArrayList<>();
@@ -271,8 +337,16 @@ public class OBJFileReader {
                         }
                         // Für neutrale graue Werte behalten wir unsere bunten Standardwerte
                     }
-                }
-                else if (parts[0].equalsIgnoreCase("map_kd")) { // Diffuse texture
+                }                else if (parts[0].equalsIgnoreCase("map_kd")) { // Diffuse texture
+                    if (parts.length >= 2) {
+                        String texturePath = parts[1];
+                        // Speichere Textur-Pfad für das aktuelle Material
+                        if (!currentMaterialName.isEmpty()) {
+                            materialToTexturePath.put(currentMaterialName, texturePath);
+                            System.out.println("Material '" + currentMaterialName + "' -> Textur: " + texturePath);
+                        }
+                    }
+                    
                     // Wenn nur eine Textur ohne Kd-Werte definiert ist, verwende vernünftige Standardwerte
                     if (currentMaterial != null) {
                         // Prüfe ob Kd noch die Standardwerte hat (0.8, 0.8, 0.8)
@@ -281,7 +355,7 @@ public class OBJFileReader {
                             currentMaterial[3] = 0.7f; currentMaterial[4] = 0.7f; currentMaterial[5] = 0.7f;
                         }
                     }
-                }                else if (parts[0].equalsIgnoreCase("ks")) { // Specular
+                }else if (parts[0].equalsIgnoreCase("ks")) { // Specular
                     if (currentMaterial != null && parts.length >= 4) {
                         float ks_r = Float.parseFloat(parts[1]);
                         float ks_g = Float.parseFloat(parts[2]);
