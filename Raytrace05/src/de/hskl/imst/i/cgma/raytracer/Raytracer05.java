@@ -44,34 +44,17 @@ public class Raytracer05 implements IRayTracerImplementation {
 	    //gui.addObject(RTFileReader.read(T_Mesh.class, new File("d:/FTCG/Raytrace05/Raytrace05/data/dreiecke2.dat")));
 	    //gui.addObject(RTFileReader.read(T_Mesh.class, new File("d:/FTCG/Raytrace05/Raytrace05/data/kugel1.dat")));
 	    //gui.addObject(RTFileReader.read(T_Mesh.class, new File("d:/FTCG/Raytrace05/Raytrace05/data/kugel2.dat")));
-	    //gui.addObject(RTFileReader.read(T_Mesh.class, new File("d:/FTCG/Raytrace05/Raytrace05/data/kugel3.dat")));
-	 	    // Lade OBJ-Datei, falls vorhanden - erstelle 3 Kopien mit verschiedenen Beleuchtungen
+	    //gui.addObject(RTFileReader.read(T_Mesh.class, new File("d:/FTCG/Raytrace05/Raytrace05/data/kugel3.dat")));	    // Lade OBJ-Datei - nur ein R2D2-Modell in der Mitte
 	    File objFile = new File("d:/FTCG/Raytrace05/Raytrace05/data/r2d2_joined.obj");
 	    if (objFile.exists()) {
-	        System.out.println("OBJ-Datei gefunden, lade 3 R2-D2 Modelle mit verschiedenen Beleuchtungen: " + objFile.getPath());
+	        System.out.println("OBJ-Datei gefunden, lade R2-D2 Modell: " + objFile.getPath());
 	        
-	        // Erstes R2-D2: Flat Shading (links)
-	        OBJ_Mesh objMesh1 = OBJFileReader.read(objFile);
-	        objMesh1.fgp = 'f'; // Flat shading
-	        transformModel(objMesh1, -4.0f, 0.0f, -5.0f); // Links positionieren
-	        gui.addObject(objMesh1);
-	        System.out.println("R2-D2 #1 (Flat Shading) geladen");
-	        
-	        // Zweites R2-D2: Gouraud Shading (mitte)  
-	        OBJ_Mesh objMesh2 = OBJFileReader.read(objFile);
-	        objMesh2.fgp = 'g'; // Gouraud shading
-	        transformModel(objMesh2, 0.0f, 0.0f, -5.0f); // Mitte positionieren
-	        gui.addObject(objMesh2);
-	        System.out.println("R2-D2 #2 (Gouraud Shading) geladen");
-	        
-	        // Drittes R2-D2: Phong Shading (rechts)
-	        OBJ_Mesh objMesh3 = OBJFileReader.read(objFile);
-	        objMesh3.fgp = 'p'; // Phong shading
-	        transformModel(objMesh3, 4.0f, 0.0f, -5.0f); // Rechts positionieren
-	        gui.addObject(objMesh3);
-	        System.out.println("R2-D2 #3 (Phong Shading) geladen");
-	        
-	        System.out.println("Alle 3 R2-D2 Modelle erfolgreich geladen und positioniert.");
+	        // R2-D2: Gouraud Shading (in der Mitte)  
+	        OBJ_Mesh objMesh = OBJFileReader.read(objFile);
+	        objMesh.fgp = 'g'; // Gouraud shading
+	        transformModel(objMesh, 0.0f, 0.0f, -5.0f); // Mitte positionieren
+	        gui.addObject(objMesh);
+	        System.out.println("R2-D2 Modell (Gouraud Shading) erfolgreich geladen und positioniert.");
 	    } else {
 	        System.out.println("Keine OBJ-Datei gefunden in: " + objFile.getPath());
 	    }
@@ -467,11 +450,15 @@ public class Raytracer05 implements IRayTracerImplementation {
     					if (Math.random() < 0.001) {
     					    System.out.printf("Gouraud: UV(%.3f,%.3f) -> RGB(%.3f,%.3f,%.3f) aus %s%n", 
     					        uvCoords[0], uvCoords[1], textureColor[0], textureColor[1], textureColor[2], texturePath);
-    					}
-    					// KORREKTUR: Viel mehr Textur-Sichtbarkeit für Gouraud
-					colorf[0] = textureColor[0] * 0.95f + colorf[0] * 0.05f;
-					colorf[1] = textureColor[1] * 0.95f + colorf[1] * 0.05f;
-					colorf[2] = textureColor[2] * 0.95f + colorf[2] * 0.05f;
+    					}					// OPTIMIERT: Besseres Textur-Beleuchtungs-Verhältnis für mehr Kontrast
+					colorf[0] = textureColor[0] * 0.85f + colorf[0] * 0.15f;
+					colorf[1] = textureColor[1] * 0.85f + colorf[1] * 0.15f;
+					colorf[2] = textureColor[2] * 0.85f + colorf[2] * 0.15f;
+					
+					// Kontrast-Boost für bessere Sichtbarkeit
+					colorf[0] = Math.min(1.0f, colorf[0] * 1.1f);
+					colorf[1] = Math.min(1.0f, colorf[1] * 1.1f);
+					colorf[2] = Math.min(1.0f, colorf[2] * 1.1f);
     				    }
     				}
     			    }
@@ -1035,78 +1022,49 @@ public class Raytracer05 implements IRayTracerImplementation {
             return;
         }
         
-        // Wrap UV-Koordinaten (Wiederholung bei Überschreitung)
-        u = u - (float)Math.floor(u);
-        v = v - (float)Math.floor(v);
+        // DEBUG: Prüfe ungültige UV-Werte
+        if (Float.isNaN(u) || Float.isNaN(v) || Float.isInfinite(u) || Float.isInfinite(v)) {
+            System.err.printf("FEHLER: Ungültige UV-Koordinaten: u=%.3f, v=%.3f%n", u, v);
+            result[0] = 1.0f; result[1] = 0.0f; result[2] = 0.0f; // Rot für Debugging
+            return;
+        }
         
-        // EXPERIMENTELL: Teste verschiedene UV-Orientierungen
-        // Variante 1: Keine Spiegelung (Standard OBJ)
-        // v = v;  // Unverändert
-        
-        // Variante 2: V-Spiegelung (OpenGL-Style)
+        // Sichere UV-Wrapping
+        while (u < 0.0f) u += 1.0f;
+        while (u > 1.0f) u -= 1.0f;
+        while (v < 0.0f) v += 1.0f;
+        while (v > 1.0f) v -= 1.0f;        // Standard UV-Transformation: V-Koordinate spiegeln (OpenGL zu DirectX Style)
+        // Dies ist die häufigste Korrektur für UV-Mapping zwischen verschiedenen Systemen
         v = 1.0f - v;
-        
-        // Variante 3: U-Spiegelung (falls horizontal gespiegelt)
-        // u = 1.0f - u;
-        
-        // Variante 4: Beide Achsen spiegeln
-        // u = 1.0f - u; v = 1.0f - v;
         
         int width = image.getWidth();
         int height = image.getHeight();
         
-        // Verbesserung: Bilineare Interpolation für glattere Texturen
-        float fx = u * (width - 1);
-        float fy = v * (height - 1);
+        // Sichere Pixel-Koordinaten berechnen
+        int pixelX = Math.round(u * (width - 1));
+        int pixelY = Math.round(v * (height - 1));
         
-        int x1 = (int)fx;
-        int y1 = (int)fy;
-        int x2 = Math.min(x1 + 1, width - 1);
-        int y2 = Math.min(y1 + 1, height - 1);
+        // Bounds-Check
+        pixelX = Math.max(0, Math.min(pixelX, width - 1));
+        pixelY = Math.max(0, Math.min(pixelY, height - 1));
         
-        float wx = fx - x1;
-        float wy = fy - y1;
-        
-        // Hole vier benachbarte Pixel
-        int pixel00 = image.getRGB(x1, y1);
-        int pixel10 = image.getRGB(x2, y1);
-        int pixel01 = image.getRGB(x1, y2);
-        int pixel11 = image.getRGB(x2, y2);
-        
-        // Extrahiere Farbkanäle
-        float r00 = ((pixel00 >> 16) & 0xFF) / 255.0f;
-        float g00 = ((pixel00 >> 8) & 0xFF) / 255.0f;
-        float b00 = (pixel00 & 0xFF) / 255.0f;
-        
-        float r10 = ((pixel10 >> 16) & 0xFF) / 255.0f;
-        float g10 = ((pixel10 >> 8) & 0xFF) / 255.0f;
-        float b10 = (pixel10 & 0xFF) / 255.0f;
-        
-        float r01 = ((pixel01 >> 16) & 0xFF) / 255.0f;
-        float g01 = ((pixel01 >> 8) & 0xFF) / 255.0f;
-        float b01 = (pixel01 & 0xFF) / 255.0f;
-        
-        float r11 = ((pixel11 >> 16) & 0xFF) / 255.0f;
-        float g11 = ((pixel11 >> 8) & 0xFF) / 255.0f;
-        float b11 = (pixel11 & 0xFF) / 255.0f;
-        
-        // Bilineare Interpolation
-        float r0 = r00 * (1 - wx) + r10 * wx;
-        float r1 = r01 * (1 - wx) + r11 * wx;
-        result[0] = r0 * (1 - wy) + r1 * wy;
-        
-        float g0 = g00 * (1 - wx) + g10 * wx;
-        float g1 = g01 * (1 - wx) + g11 * wx;
-        result[1] = g0 * (1 - wy) + g1 * wy;
-        
-        float b0 = b00 * (1 - wx) + b10 * wx;
-        float b1 = b01 * (1 - wx) + b11 * wx;
-        result[2] = b0 * (1 - wy) + b1 * wy;
-        
-        // Debug: Zeige UV-Transformation (selten)
-        if (Math.random() < 0.0005) {
-            System.out.printf("UV-Sampling V2: Original(%.3f,%.3f) -> Bilinear RGB(%.3f,%.3f,%.3f)%n", 
-                u, v, result[0], result[1], result[2]);
+        // Hole Pixel und extrahiere Farbe
+        int pixel = image.getRGB(pixelX, pixelY);
+        result[0] = ((pixel >> 16) & 0xFF) / 255.0f; // Rot
+        result[1] = ((pixel >> 8) & 0xFF) / 255.0f;  // Grün
+        result[2] = (pixel & 0xFF) / 255.0f;         // Blau
+          // Debug: Zeige UV und Textur-Info (reduziert)
+        if (Math.random() < 0.0001) {
+            System.out.printf("UV-Sample: (%.3f,%.3f) -> RGB(%.3f,%.3f,%.3f) [%dx%d]%n", 
+                u, v, result[0], result[1], result[2], width, height);
+        }
+          // WARNUNG bei konstanten Grauwerten (reduziert für bessere Performance)
+        if (Math.abs(result[0] - result[1]) < 0.01f && Math.abs(result[1] - result[2]) < 0.01f && 
+            result[0] > 0.7f && result[0] < 0.9f) {
+            if (Math.random() < 0.001) { // Sehr selten anzeigen
+                System.err.printf("INFO: Metallische Textur: RGB(%.3f,%.3f,%.3f) bei UV(%.3f,%.3f)%n", 
+                    result[0], result[1], result[2], u, v);
+            }
         }
     }
 }

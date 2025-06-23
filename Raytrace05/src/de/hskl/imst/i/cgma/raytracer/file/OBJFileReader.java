@@ -42,7 +42,30 @@ public class OBJFileReader {
         Map<String, Integer> materialNameToIndex = new HashMap<>();
         Map<String, String> materialToTexturePath = new HashMap<>(); // Material-Name zu Textur-Pfad
         int currentMaterialIndex = 0; // Standard-Material
+          // ERSTER DURCHGANG: Lade zuerst alle MTL-Dateien
+        try (BufferedReader reader = new BufferedReader(new FileReader(objFile))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                line = line.trim();
+                if (line.isEmpty() || line.startsWith("#")) {
+                    continue;
+                }
+                String[] parts = line.split("\\s+");
+                if (parts[0].equalsIgnoreCase("mtllib")) {
+                    if (parts.length >= 2) {
+                        String mtlFilename = parts[1];
+                        File mtlFile = new File(objFile.getParent(), mtlFilename);
+                        if (mtlFile.exists()) {
+                            loadMTLFile(mtlFile, mesh, materialNameToIndex, materialToTexturePath);
+                        } else {
+                            System.out.println("WARNUNG: MTL-Datei nicht gefunden: " + mtlFilename);
+                        }
+                    }
+                }
+            }
+        }
         
+        // ZWEITER DURCHGANG: Lade Geometrie mit bereits bekannten Materialien
         try (BufferedReader reader = new BufferedReader(new FileReader(objFile))) {
             String line;
             
@@ -52,7 +75,7 @@ public class OBJFileReader {
                     continue; // Überspringe Kommentare und leere Zeilen
                 }
                 
-                String[] parts = line.split("\\s+");                if (parts[0].equalsIgnoreCase("v")) { // Vertex
+                String[] parts = line.split("\\s+");if (parts[0].equalsIgnoreCase("v")) { // Vertex
                     if (parts.length >= 4) {
                         float[] vertex = new float[3];
                         vertex[0] = Float.parseFloat(parts[1]);
@@ -93,27 +116,22 @@ public class OBJFileReader {
                         uvIndices.add(uvFace);
                         faceMaterials.add(currentMaterialIndex); // Speichere aktuelles Material für dieses Face
                     }
-                }
-                else if (parts[0].equalsIgnoreCase("usemtl")) { // Material verwenden
+                }                else if (parts[0].equalsIgnoreCase("usemtl")) { // Material verwenden
                     if (parts.length >= 2) {
                         String materialName = parts[1];
                         Integer materialIndex = materialNameToIndex.get(materialName);
                         if (materialIndex != null) {
                             currentMaterialIndex = materialIndex;
+                            System.out.println("DEBUG: Wechsel zu Material '" + materialName + "' (Index " + materialIndex + ")");
                         } else {
-                            System.out.println("WARNUNG: Unbekanntes Material: " + materialName);
+                            System.out.println("WARNUNG: Unbekanntes Material: " + materialName + " - verwende Standard-Material (Index 0)");
+                            currentMaterialIndex = 0; // Fallback auf Standard-Material
                         }
                     }
-                }                else if (parts[0].equalsIgnoreCase("mtllib")) {
-                    if (parts.length >= 2) {
-                        String mtlFilename = parts[1];
-                        File mtlFile = new File(objFile.getParent(), mtlFilename);
-                        if (mtlFile.exists()) {
-                            loadMTLFile(mtlFile, mesh, materialNameToIndex, materialToTexturePath);
-                        } else {
-                            System.out.println("WARNUNG: MTL-Datei nicht gefunden: " + mtlFilename);
-                        }
-                    }
+                }
+                // MTL-Dateien werden bereits im ersten Durchgang verarbeitet - hier überspringen
+                else if (parts[0].equalsIgnoreCase("mtllib")) {
+                    // Bereits verarbeitet - überspringen
                 }
             }
         }
@@ -175,22 +193,47 @@ public class OBJFileReader {
                     System.out.println("Material '" + materialName + "' (Index " + materialIndex + ") -> Textur: " + texturePath);
                 }
             }
-        }
-          // Setze Material für alle Vertices basierend auf Face-Materialien
+        }        // Setze Material für alle Vertices basierend auf Face-Materialien
         mesh.verticesMat = new int[mesh.vertices.length];
         // Initialisiere alle Vertices mit Material 0
         for (int i = 0; i < mesh.verticesMat.length; i++) {
             mesh.verticesMat[i] = 0;
         }
         
+        // DEBUG: Zähle Face-Material-Verwendung
+        int[] faceMaterialUsage = new int[mesh.materials != null ? mesh.materials.length : 1];
+        
         // Setze Material für Vertices basierend auf den Faces, die sie verwenden
         for (int faceIndex = 0; faceIndex < mesh.triangles.length; faceIndex++) {
             int materialIndex = faceMaterials.get(faceIndex);
+            
+            // DEBUG: Zähle Material-Verwendung pro Face
+            if (materialIndex < faceMaterialUsage.length) {
+                faceMaterialUsage[materialIndex]++;
+            }
+            
             // Setze Material für alle drei Vertices dieses Faces
             for (int vertexIndex : mesh.triangles[faceIndex]) {
                 if (vertexIndex >= 0 && vertexIndex < mesh.verticesMat.length) {
                     mesh.verticesMat[vertexIndex] = materialIndex;
                 }
+            }
+        }
+          // DEBUG: Ausgabe der Face-Material-Verteilung
+        System.out.print("Face-Material-Verwendung: ");
+        for (int i = 0; i < faceMaterialUsage.length; i++) {
+            if (faceMaterialUsage[i] > 0) {
+                System.out.print("Mat" + i + ":" + faceMaterialUsage[i] + "faces ");
+            }
+        }
+        System.out.println();
+        
+        // Setze Face-Materialien für OBJ_Mesh
+        if (mesh instanceof OBJ_Mesh) {
+            OBJ_Mesh objMesh = (OBJ_Mesh) mesh;
+            objMesh.faceMaterials = new int[faceMaterials.size()];
+            for (int i = 0; i < faceMaterials.size(); i++) {
+                objMesh.faceMaterials[i] = faceMaterials.get(i);
             }
         }
         
@@ -336,12 +379,11 @@ public class OBJFileReader {
                             currentMaterial[5] = kd_b;
                         }
                         // Für neutrale graue Werte behalten wir unsere bunten Standardwerte
-                    }
-                }                else if (parts[0].equalsIgnoreCase("map_kd")) { // Diffuse texture
+                    }                }                else if (parts[0].equalsIgnoreCase("map_kd")) { // Diffuse texture
                     if (parts.length >= 2) {
-                        String texturePath = parts[1];
-                        // Speichere Textur-Pfad für das aktuelle Material
+                        String texturePath = parts[1];                        // Speichere Textur-Pfad für das aktuelle Material
                         if (!currentMaterialName.isEmpty()) {
+                            // ALLE TEXTUREN WIEDER AKTIVIERT
                             materialToTexturePath.put(currentMaterialName, texturePath);
                             System.out.println("Material '" + currentMaterialName + "' -> Textur: " + texturePath);
                         }
