@@ -21,7 +21,7 @@ public class Raytracer05 implements IRayTracerImplementation {
     private float[] Ia = { 0.25f, 0.25f, 0.25f }; // ambient light color
     private float[] Ids = { 1.0f, 1.0f, 1.0f }; // diffuse and specular light
 						// color
-    private float[] ICenter = { 100.0f, 400.0f, 300.0f }; // center of point light
+    private float[] ICenter = { -100.0f, 400.0f, 600.0f }; // center of point light über der Schrift
     
     RayTracerGui gui = new RayTracerGui(this);
 
