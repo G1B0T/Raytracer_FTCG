@@ -21,7 +21,7 @@ public class Raytracer05 implements IRayTracerImplementation {
     private float[] Ia = { 0.25f, 0.25f, 0.25f }; // ambient light color
     private float[] Ids = { 1.0f, 1.0f, 1.0f }; // diffuse and specular light
 						// color
-    private float[] ICenter = { 4.0f, 4.0f, 2.0f }; // center of point light
+    private float[] ICenter = { 100.0f, 400.0f, 300.0f }; // center of point light
     
     RayTracerGui gui = new RayTracerGui(this);
 
@@ -37,7 +37,7 @@ public class Raytracer05 implements IRayTracerImplementation {
 			//gui.addObject(meshSTL);
 			
 			// OBJ-Datei mit zugehöriger MTL-Datei laden
-			T_Mesh meshOBJ = OBJImporter.loadOBJ(new File("data/wolkeeeee.obj"), new File("data/wolkeeeee.mtl"));
+			T_Mesh meshOBJ = OBJImporter.loadOBJ(new File("data/wolkeeeee3.obj"), new File("data/wolkeeeee3.mtl"));
 			gui.addObject(meshOBJ);
 			
 			// T_Mesh mesh = BinarySTLImporter.loadBinarySTL(new File("data/test.stl"));
@@ -89,8 +89,8 @@ public class Raytracer05 implements IRayTracerImplementation {
 	setViewParameters(90.0f, 1.0f);
 	// set eye point
 	rayEx = 0;
-	rayEy = 60;
-	rayEz = 20;
+	rayEy = 100;
+	rayEz = -20;
 			
 	
 	z = -near;

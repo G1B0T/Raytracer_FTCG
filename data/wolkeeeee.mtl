@@ -2,14 +2,14 @@
 # www.blender.org
 
 newmtl Material
-Ns 250.000000
-Ka 1.000000 1.000000 1.000000
-Kd 0.008510 0.294843 0.800393
-Ks 0.500000 0.500000 0.500000
-Ke 0.000000 0.000000 0.000000
+Ns 100.000000
+Ka 0.300000 0.300000 0.300000   # Ambient – mittleres Grau
+Kd 0.500000 0.500000 0.500000   # Diffuse – neutrales Grau
+Ks 0.200000 0.200000 0.200000   # leichter, neutraler Glanz
+Ke 0.000000 0.000000 0.000000   # kein Eigenleuchten
 Ni 1.500000
-d 1.000000
-illum 2
+d 1.000000                      # vollständig deckend
+illum 2                         # Beleuchtungsmodell mit Glanzlicht
 
 newmtl Material.001
 Ns 250.000000
@@ -42,14 +42,14 @@ illum 2
 map_Kd C:/Downloads/D:/Blender Projekte/2. R2D2 Sternenwarte/Unity/final/Marble012_1K-JPG_Color.jpg
 
 newmtl Material.011
-Ns 804.060486
-Ka 0.855372 0.855372 0.855372
-Kd 0.800000 0.800000 0.800000
-Ks 0.500000 0.500000 0.500000
-Ke 0.000000 0.000000 0.000000
+Ns 200.000000
+Ka 0.200000 0.500000 0.200000   # Ambient – gedämpftes Grün
+Kd 0.200000 0.800000 0.200000   # Diffuse – sattes, lebendiges Grün
+Ks 0.300000 0.600000 0.300000   # grünlicher Glanz
+Ke 0.000000 0.000000 0.000000   # kein Leuchten
 Ni 1.450000
-d 1.000000
-illum 3
+d 1.000000                      # voll deckend
+illum 3                         # mit Reflektionen und Glanz
 
 newmtl ausenflaeche_unten_mat
 Ns 250.000000
@@ -62,14 +62,14 @@ illum 2
 map_Kd C:/Downloads/D:/Blender Projekte/2. R2D2 Sternenwarte/Unity/final/r2d2_außen_unten_tex2.png
 
 newmtl boden
-Ns 250.000000
-Ka 1.000000 1.000000 1.000000
-Kd 0.000000 0.517586 0.012961
-Ks 0.500000 0.500000 0.500000
-Ke 0.000000 0.000000 0.000000
+Ns 100.000000
+Ka 0.600000 0.800000 1.000000   # Ambient – zartes Himmelblau
+Kd 0.600000 0.800000 1.000000   # Diffuse – Hauptfarbe (helles Blau)
+Ks 0.050000 0.050000 0.050000   # kaum Glanz
+Ke 0.000000 0.000000 0.000000   # kein Leuchten
 Ni 1.500000
-d 1.000000
-illum 2
+d 1.000000                      # voll deckend
+illum 2                         # Standard mit Spiegellicht
 
 newmtl cylinder
 Ns 250.000000
@@ -132,21 +132,22 @@ illum 2
 map_Kd C:/Downloads/D:/Blender Projekte/2. R2D2 Sternenwarte/Unity/final/r2d2_rund_detail_tex.png
 
 newmtl treppe
-Ns 250.000000
-Ka 1.000000 1.000000 1.000000
-Kd 0.244502 0.244502 0.244502
-Ks 0.500000 0.500000 0.500000
-Ke 0.000000 0.000000 0.000000
+Ns 50.000000
+Ka 0.900000 0.900000 0.900000   # Ambient – sehr hell, leicht diffus
+Kd 1.000000 1.000000 1.000000   # Diffuse – reines Weiß
+Ks 0.200000 0.200000 0.200000   # weiches Glanzlicht
+Ke 0.000000 0.000000 0.000000   # kein Eigenleuchten
 Ni 1.500000
-d 1.000000
-illum 2
+d 1.000000                      # vollständig deckend
+illum 2                         # Beleuchtung mit spekularen Highlights
+
 
 newmtl wolke
 Ns 250.000000
-Ka 1.000000 1.000000 1.000000
-Kd 0.800000 0.800000 0.800000
-Ks 0.500000 0.500000 0.500000
-Ke 0.000000 0.000000 0.000000
+Ka 1.000000 1.000000 1.000000  # Ambient Color (weiß)
+Kd 1.000000 1.000000 1.000000  # Diffuse Color (weiß)
+Ks 0.000000 0.000000 0.000000  # Specular Color (kein Glanz)
+Ke 0.000000 0.000000 0.000000  # Emissive (nicht leuchtend)
 Ni 1.500000
-d 1.000000
-illum 2
+d 1.000000                     # Deckkraft (1 = voll sichtbar)
+illum 2                        # Beleuchtungsmodell mit Spekular

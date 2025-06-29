@@ -1,0 +1,169 @@
+# Blender 4.4.3 MTL File: 'AbgabeModellierung04.blend'
+# www.blender.org
+
+newmtl Material
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.008510 0.294843 0.800393
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+
+newmtl Material.001
+Ns 250.000000
+Ka 0.900000 0.800000 0.200000   # Ambient – warmes, weiches Gelb
+Kd 1.000000 0.900000 0.200000   # Diffuse – sonnengelb (sichtbare Hauptfarbe)
+Ks 0.500000 0.500000 0.300000   # leicht goldgelber Glanz
+Ke 0.000000 0.000000 0.000000   # kein Eigenleuchten
+Ni 1.500000
+d 1.000000                      # vollständig deckend
+illum 2                         # diffuse + specular Beleuchtung
+
+
+
+newmtl Material.009
+Ns 500.000000                        # höherer Glanz für Metall-Effekt
+Ka 0.300000 0.300000 0.300000        # Ambient – neutral grau
+Kd 0.600000 0.600000 0.600000        # Diffuse – metallisch hellgrau
+Ks 0.900000 0.900000 0.900000        # starker Glanz (metalltypisch)
+Ke 0.000000 0.000000 0.000000        # kein Eigenleuchten
+Ni 1.000000                          # realistisch niedrig für Metall
+d 1.000000                           # vollständig deckend
+illum 2                              # diffuse + specular
+map_Kd C:/Downloads/D:/Blender Projekte/2. R2D2 Sternenwarte/Unity/final/Metal044B_2K-JPG_Color.jpg
+
+
+newmtl Material.010
+Ns 200.000000                        # mittlerer Glanz – glatt, aber nicht spiegelnd
+Ka 0.900000 0.900000 0.900000        # Ambient – helles Grau/Weiß (typisch für Marmor)
+Kd 1.000000 1.000000 1.000000        # Diffuse – reines Weiß für Basisfarbe
+Ks 0.300000 0.300000 0.300000        # leichter Glanz (polierter Marmor)
+Ke 0.000000 0.000000 0.000000        # kein Eigenleuchten
+Ni 1.450000                          # realistischer Brechungsindex für Gestein
+d 1.000000                           # vollständig deckend
+illum 2                              # diffuse + specular
+map_Kd C:/Downloads/D:/Blender Projekte/2. R2D2 Sternenwarte/Unity/final/Marble012_1K-JPG_Color.jpg
+
+
+newmtl Material.011
+Ns 804.060486
+Ka 0.855372 0.855372 0.855372
+Kd 0.800000 0.800000 0.800000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 3
+
+newmtl ausenflaeche_unten_mat
+Ns 250.000000
+Ka 0.950000 0.950000 0.950000        # Ambient – fast reines Weiß
+Kd 1.000000 1.000000 1.000000        # Diffuse – reines Weiß (sichtbare Farbe)
+Ks 0.500000 0.500000 0.500000        # neutraler, metallischer Glanz
+Ke 0.000000 0.000000 0.000000        # kein Leuchten
+Ni 1.450000                          # realistisch für Technik-Oberflächen
+d 1.000000                           # vollständig deckend
+illum 2                              # diffuse + specular
+map_Kd C:/Downloads/D:/Blender Projekte/2. R2D2 Sternenwarte/Unity/final/r2d2_außen_unten_tex2.png
+
+
+newmtl boden.001
+Ns 360.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.000000 0.800000 0.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+
+newmtl cylinder
+Ns 250.000000
+Ka 0.950000 0.950000 0.950000        # Ambient – leicht gedämpftes Weiß
+Kd 1.000000 1.000000 1.000000        # Diffuse – reines Weiß (sichtbare Hauptfarbe)
+Ks 0.500000 0.500000 0.500000        # neutraler metallischer Glanz
+Ke 0.000000 0.000000 0.000000        # kein Eigenleuchten
+Ni 1.450000                          # realistischer IOR für technische Oberflächen
+d 1.000000                           # vollständig deckend
+illum 2                              # diffuse + specular Beleuchtung
+
+
+newmtl door_mat
+Ns 400.000000                        # starker Glanz für metallische Oberfläche
+Ka 0.400000 0.400000 0.400000        # Ambient – neutral grau
+Kd 0.700000 0.700000 0.700000        # Diffuse – helles Metallgrau (sichtbar)
+Ks 0.900000 0.900000 0.900000        # starker Glanz (Spiegelung bei Licht)
+Ke 0.000000 0.000000 0.000000        # kein Eigenleuchten
+Ni 1.000000                          # niedrig – typisch für Metall
+d 1.000000                           # vollständig deckend
+illum 2                              # diffuse + specular
+map_Kd C:/Downloads/D:/Blender Projekte/2. R2D2 Sternenwarte/Unity/final/door_tex.png
+
+
+newmtl kuppel_mat2.001
+Ns 250.000000
+Ka 0.950000 0.950000 0.950000        # Ambient – fast reines Weiß
+Kd 1.000000 1.000000 1.000000        # Diffuse – strahlend weiß (sichtbar)
+Ks 0.500000 0.500000 0.500000        # neutraler Glanz – leicht metallisch
+Ke 0.000000 0.000000 0.000000        # kein Leuchten
+Ni 1.450000                          # realistisch für technische Oberflächen
+d 1.000000                           # vollständig deckend
+illum 2                              # diffuse + specular Beleuchtung
+map_Kd C:/Downloads/D:/Blender Projekte/2. R2D2 Sternenwarte/Unity/final/kuppel_tex2.png
+
+newmtl kuppel_oeffnung_001_mat
+Ns 250.000000
+Ka 0.100000 0.100000 0.300000        # Ambient – dunkles Blau
+Kd 0.000000 0.300000 0.800000        # Diffuse – kräftiges R2D2-Blau
+Ks 0.400000 0.400000 0.600000        # kühler Glanz mit Blaustich
+Ke 0.000000 0.000000 0.000000        # kein Leuchten
+Ni 1.450000                          # typischer Wert für nicht-transparentes Material
+d 1.000000                           # vollständig deckend
+illum 2                              # diffuse + specular Beleuchtung
+
+
+newmtl kuppel_oeffnung_mat
+Ns 250.000000
+Ka 0.100000 0.100000 0.300000        # Ambient – dunkles Blau
+Kd 0.000000 0.300000 0.800000        # Diffuse – sichtbares R2D2-Blau
+Ks 0.400000 0.400000 0.600000        # kühler Blaustich im Glanz
+Ke 0.000000 0.000000 0.000000        # kein Leuchten
+Ni 1.450000                          # realistische Lichtbrechung für Nicht-Metall
+d 1.000000                           # vollständig deckend
+illum 2                              # diffuse + specular Beleuchtung
+map_Kd C:/Downloads/D:/Blender Projekte/2. R2D2 Sternenwarte/Unity/final/kuppel_oeffnung_tex.png
+
+
+newmtl r2d2_rund_detail_mat
+Ns 250.000000
+Ka 0.100000 0.100000 0.300000        # Ambient – leicht dunkles Blau
+Kd 0.000000 0.300000 0.800000        # Diffuse – sichtbares R2D2-Blau
+Ks 0.400000 0.400000 0.600000        # kühler Glanz für metallischen Look
+Ke 0.000000 0.000000 0.000000        # kein Eigenleuchten
+Ni 1.450000                          # typischer IOR für Technik
+d 1.000000                           # vollständig deckend
+illum 2                              # diffuse + specular Beleuchtung
+map_Kd C:/Downloads/D:/Blender Projekte/2. R2D2 Sternenwarte/Unity/final/r2d2_rund_detail_tex.png
+
+
+newmtl treppe
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.244502 0.244502 0.244502
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+
+newmtl wolke
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.800000 0.800000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
