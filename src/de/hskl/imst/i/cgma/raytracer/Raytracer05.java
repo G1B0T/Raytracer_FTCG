@@ -32,13 +32,16 @@ public class Raytracer05 implements IRayTracerImplementation {
 
     private Raytracer05() {
 		try {
+			// STL-Datei laden
+			//T_Mesh meshSTL = STLImporter.loadSTL(new File("data/wolkenMitSeite.stl"), 0.5f);
+			//gui.addObject(meshSTL);
 			
-			T_Mesh mesh = STLImporter.loadSTL(new File("data/wolkenMitSeite.stl"), 0.5f);
-
+			// OBJ-Datei mit zugehöriger MTL-Datei laden
+			T_Mesh meshOBJ = OBJImporter.loadOBJ(new File("data/wolkeeeee.obj"), new File("data/wolkeeeee.mtl"));
+			gui.addObject(meshOBJ);
+			
 			// T_Mesh mesh = BinarySTLImporter.loadBinarySTL(new File("data/test.stl"));
 
-			gui.addObject(mesh);
-	
 	    // gui.addObject(RTFileReader.read(I_Sphere.class, new File("data/ikugel.dat")));
 	    // gui.addObject(RTFileReader.read(I_Sphere.class, new File("data/ikugel2.dat")));
 	    // gui.addObject(RTFileReader.read(T_Mesh.class, new File("data/dreieck1.dat")));
